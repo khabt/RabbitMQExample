@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace RabbitMQExample.Models
 {
-    class SmtpConfig
+   public class SmtpConfig
     {
         public string Host { get; set; }
         public int Port { get; set; }
@@ -14,11 +14,12 @@ namespace RabbitMQExample.Models
         public string Password { get; set; }
         public bool EnableSSL { get; set; } = true;
 
-        public SmtpConfig(string host, int port, string userName, bool enableSSL)
+        public SmtpConfig(string host, int port, string userName,string password, bool enableSSL)
         {
             Host = host;
             Port = port;
             UserName = userName;
+            Password = password;
             EnableSSL = enableSSL;
         }
     }

@@ -12,7 +12,7 @@ using System.Threading.Tasks;
 
 namespace RabbitMQExample.Implements
 {
-    class EmailProcessor : IEmailProcessor
+    public class EmailProcessor : IEmailProcessor
     {
         private static readonly log4net.ILog log = log4net.LogManager.GetLogger(typeof(EmailProcessor));
         private SmtpConfig _smtpConfig = null;
@@ -36,13 +36,26 @@ namespace RabbitMQExample.Implements
 
         private void SendMail(Email email, SmtpConfig smtpConfig)
         {
-            System.Net.Mail.MailMessage mail = new System.Net.Mail.MailMessage(smtpConfig.UserName, email.To, email.Subject, email.Body);
-            SmtpClient smtpClient = new SmtpClient();
-            smtpClient.Host = smtpConfig.Host;
-            smtpClient.Port = smtpConfig.Port;
-            smtpClient.Credentials = new NetworkCredential(smtpConfig.UserName, smtpConfig.Password);
-            smtpClient.EnableSsl = smtpConfig.EnableSSL;
-            smtpClient.DeliveryFormat = SmtpDeliveryFormat.International;
+            try
+            {
+                System.Net.Mail.MailMessage mail = new System.Net.Mail.MailMessage(smtpConfig.UserName, email.To, email.Subject, email.Body);
+                mail.IsBodyHtml = true;
+                mail.BodyEncoding = Encoding.UTF8;
+                SmtpClient smtpClient = new SmtpClient();
+                int timeout = smtpClient.Timeout;
+                //smtpClient.Timeout = timeout * 10;
+                smtpClient.Host = smtpConfig.Host;
+                smtpClient.Port = smtpConfig.Port;
+                smtpClient.Credentials = new NetworkCredential(smtpConfig.UserName, smtpConfig.Password);
+                smtpClient.EnableSsl = smtpConfig.EnableSSL;
+                smtpClient.DeliveryFormat = SmtpDeliveryFormat.International;
+                smtpClient.Send(mail);
+                smtpClient.Dispose();
+            }
+            catch (Exception ex)
+            {
+                log.Error(ex.Message);
+            }           
         }
     }
 }

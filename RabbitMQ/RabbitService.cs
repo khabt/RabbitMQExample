@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
+using RabbitMQExample.Implements;
 using RabbitMQExample.Interfaces;
 using RabbitMQExample.Models;
 using System;
@@ -16,17 +17,17 @@ using System.Threading.Tasks;
 
 namespace RabbitMQExample.RabbitMQ
 {
-    public class RabbitSendService
+    public class RabbitService
     {
         private static IConnection _connection = null;
         private static IModel _channel = null;
         private static IBasicProperties _properties = null;
         private string _emailQueue = null;
         private Config _config;
-        private static readonly ILog _log = LogManager.GetLogger(typeof(RabbitSendService));
+        private static readonly ILog _log = LogManager.GetLogger(typeof(RabbitService));
         private IEmailProcessor EmailProcessor;
         //private WaitCallback waitCallback;
-        public static RabbitSendService Instance { get; } = new RabbitSendService();
+        public static RabbitService Instance { get; } = new RabbitService();
 
         private void Init()
         {
@@ -35,14 +36,17 @@ namespace RabbitMQExample.RabbitMQ
         }
         public void Init(string uri, string emailQueue, bool durable = true)
         {
+            _log.Info("Start");
+            _log.Debug("Start");
             try
             {
                 var _connectionFactory = new ConnectionFactory
                 {
+                    DispatchConsumersAsync = true,
                     Uri = new Uri(uri),
                     RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000)
                 };
-                _connection = _connectionFactory.CreateConnection();
+                _connection = _connectionFactory.CreateConnection();                
                 _channel = _connection.CreateModel();
                 this._emailQueue = emailQueue;
                 _channel.QueueDeclare(queue: _emailQueue,
@@ -122,7 +126,7 @@ namespace RabbitMQExample.RabbitMQ
                 autoDelete: false,
                 arguments: null);
 
-            _channel.BasicQos(prefetchSize: 0, prefetchCount: (ushort)10, global: false);
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: (ushort)3000, global: false);
             var consumer = new AsyncEventingBasicConsumer(_channel);
             consumer.Received += async (model, evenInfo) =>
             {
@@ -135,17 +139,31 @@ namespace RabbitMQExample.RabbitMQ
                 });
                 await Task.Yield();
             };
+
+            //consumer.Received += (model, evenInfo) =>
+            //{
+            //    byte[] body = evenInfo.Body.ToArray();
+            //    string message = Encoding.UTF8.GetString(body);
+            //    ProcessEmailItem(message);                
+            //};
+
+            _channel.BasicConsume(queue: _emailQueue,
+                    autoAck: false,
+                    consumer: consumer);
         }
         private void ProcessEmailItem(object args)
         {
             QueueItem item = (QueueItem)args;
             string msg = item.Message;
-            EmailProcessor.ProcessEmail(msg);
+            EmailProcessor.ProcessEmail((string)msg);
+            _channel.BasicAck(deliveryTag: item.EventInfo.DeliveryTag, multiple: false);
         }
 
-        public void Listen()
+        public void Listen(SmtpConfig smtpConfig)
         {
+            EmailProcessor = new EmailProcessor(smtpConfig);
             ListenQueue(ProcessEmailItem);
+
         }
     }
 }
