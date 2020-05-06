@@ -21,7 +21,7 @@ namespace RabbitMQExample
 
         public static void SendListMail() 
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 100000; i++)
             {
                 Email mail = new Email();
                 mail.To = To;

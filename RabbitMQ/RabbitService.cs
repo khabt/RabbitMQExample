@@ -37,16 +37,15 @@ namespace RabbitMQExample.RabbitMQ
         public void Init(string uri, string emailQueue, bool durable = true)
         {
             _log.Info("Start");
-            _log.Debug("Start");
             try
             {
                 var _connectionFactory = new ConnectionFactory
                 {
-                    DispatchConsumersAsync = true,
+                    DispatchConsumersAsync = true,//false
                     Uri = new Uri(uri),
                     RequestedConnectionTimeout = TimeSpan.FromMilliseconds(5000)
                 };
-                _connection = _connectionFactory.CreateConnection();                
+                _connection = _connectionFactory.CreateConnection();
                 _channel = _connection.CreateModel();
                 this._emailQueue = emailQueue;
                 _channel.QueueDeclare(queue: _emailQueue,
@@ -128,41 +127,64 @@ namespace RabbitMQExample.RabbitMQ
 
             _channel.BasicQos(prefetchSize: 0, prefetchCount: (ushort)3000, global: false);
             var consumer = new AsyncEventingBasicConsumer(_channel);
-            consumer.Received += async (model, evenInfo) =>
+            consumer.Received += async (model, eventInfo) =>
             {
-                byte[] body = evenInfo.Body.ToArray();
+                byte[] body = eventInfo.Body.ToArray();
                 string message = Encoding.UTF8.GetString(body);
                 ThreadPool.QueueUserWorkItem(waitCallback, new QueueItem()
                 {
                     Message = message,
-                    EventInfo = evenInfo
+                    EventInfo = eventInfo
                 });
                 await Task.Yield();
             };
 
-            //consumer.Received += (model, evenInfo) =>
-            //{
-            //    byte[] body = evenInfo.Body.ToArray();
-            //    string message = Encoding.UTF8.GetString(body);
-            //    ProcessEmailItem(message);                
-            //};
-
             _channel.BasicConsume(queue: _emailQueue,
                     autoAck: false,
                     consumer: consumer);
+        }
+
+        private void ListenQueue()
+        {
+            _channel.QueueDeclare(queue: _emailQueue,
+                durable: true,
+                exclusive: false,
+                autoDelete: false,
+                arguments: null);
+
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: 3000, global: false);
+
+            var consumer = new EventingBasicConsumer(_channel);
+            int i = 0;
+            consumer.Received += (model, eventInfo) =>
+            {
+                byte[] body = eventInfo.Body.ToArray();
+                string message = Encoding.UTF8.GetString(body);
+                Console.WriteLine("i: " + i++);
+            };
+
+            _channel.BasicConsume(queue: _emailQueue,
+                   autoAck: true,
+                   consumer: consumer);
+
         }
         private void ProcessEmailItem(object args)
         {
             QueueItem item = (QueueItem)args;
             string msg = item.Message;
             EmailProcessor.ProcessEmail((string)msg);
+            _log.Info(item.EventInfo.DeliveryTag);
             _channel.BasicAck(deliveryTag: item.EventInfo.DeliveryTag, multiple: false);
+
         }
 
         public void Listen(SmtpConfig smtpConfig)
         {
             EmailProcessor = new EmailProcessor(smtpConfig);
             ListenQueue(ProcessEmailItem);
+            //ListenQueue();
+            //_log.Info(DeliverTag);
+            //_channel.BasicAck(deliveryTag: DeliverTag, multiple: true);
 
         }
     }
