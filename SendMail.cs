@@ -15,13 +15,13 @@ namespace RabbitMQExample
 {
     public class SendMail
     {        
-        private static string To = "buikha2011@gmail.com";
+        private static string To = "khabt@softreams.vn";
         private static string Body = Utilities.ReadTemplateFile("test.html");
         private static string Subject = "test mail";
 
         public static void SendListMail() 
         {
-            for (int i = 0; i < 100000; i++)
+            for (int i = 0; i < 10; i++)
             {
                 Email mail = new Email();
                 mail.To = To;

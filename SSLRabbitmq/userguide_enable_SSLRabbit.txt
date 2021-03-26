@@ -1,0 +1,34 @@
+
+Hướng dẫn bật SSL rabbitmq và implement SSL vào service. 
+
+1. Chạy rabbitmq-plugins enable rabbitmq_management, bằng cách mở rabbitmq command, trường hợp không có rabbitmq command, vào mở cmd bằng admin
+sau đó cd C:\Program Files\RabbitMQ Server\rabbitmq_server-3.7.9\sbin
+mục đích để bật giao diện web lên.
+
+2. Chạy rabbitmq-plugins.bat enable rabbitmq_auth_mechanism_ssl, bằng cách mở rabbitmq command, bật ssl cho rabbitmq.
+
+3. Cài đặt OpenSSL, xóa file C:\Users\Dell\AppData\Roaming\RabbitMQ\rabbitmq.conf  or rabbitmq.config nếu có trong folder này.
+Sửa phiên bản rabbitmq trong file ps1 cùng với phiên bản rabbitmq được cài đặt trong máy, sau đó chạy file ps1 bằng power shell admin.
+.\filename.ps1
++ File selfsigned.crt, file selfsigned.key được tạo trong chính folder chạy file ps1.
++ File C:\Users\{username}\AppData\Roaming\RabbitMQ\rabbitmq.conf được tạo.
++ Tắt port 5672 bằng cách thêm dòng listeners.tcp = none vào file rabbitmq.conf
+
+4. Mở http://localhost:15672/#/ , ở tab overview chọn mục Ports and contexts để xem amqp/ssl port 5671 để kiểm tra. 
+
+5. Mở openssl bằng admin, chạy lệnh này openssl pkcs12 -export -out server.p12 -inkey selfsigned.key -in selfsigned.crt -certfile selfsigned.crt
+Or Mở cmd bằng admin, sau đó cd C:\Program Files\OpenSSL-Win64\bin và chạy lệnh openssl pkcs12 -export -out server.p12 -inkey selfsigned.key -in selfsigned.crt -certfile selfsigned.crt
++ Mục đích để tạo file server.p12 và password.
+
+6. Implement thông tin kết nối cả service gửi vào message quere rabbit và service nhận từ message quere rabbit. 
+connectionFactory.Ssl.ServerName = System.Net.Dns.GetHostName();
+connectionFactory.Ssl.CertPath = ConfigurationManager.AppSettings["RabbitCertPath"].ToString();
+connectionFactory.Ssl.CertPassphrase = ConfigurationManager.AppSettings["RabbitCertPass"].ToString();
+
+7. Đổi Uri rabbit amqps://guest:guest@localhost/ (ampq có s).
+
+8. Chạy lại 2 service để xem kết quả. 
+
+
+Note: source file ps1 https://gist.github.com/skewl84/a72321379a65c4c5cfd447f8806b5188
+

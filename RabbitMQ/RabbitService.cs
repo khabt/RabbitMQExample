@@ -125,7 +125,7 @@ namespace RabbitMQExample.RabbitMQ
                 autoDelete: false,
                 arguments: null);
 
-            _channel.BasicQos(prefetchSize: 0, prefetchCount: (ushort)3000, global: false);
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: (ushort)10, global: false);
             var consumer = new AsyncEventingBasicConsumer(_channel);
             consumer.Received += async (model, eventInfo) =>
             {
@@ -152,7 +152,7 @@ namespace RabbitMQExample.RabbitMQ
                 autoDelete: false,
                 arguments: null);
 
-            _channel.BasicQos(prefetchSize: 0, prefetchCount: 3000, global: false);
+            _channel.BasicQos(prefetchSize: 0, prefetchCount: 10, global: false);
 
             var consumer = new EventingBasicConsumer(_channel);
             int i = 0;
